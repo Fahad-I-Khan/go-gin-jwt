@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
@@ -98,7 +99,8 @@ func login(c *gin.Context) {
 	}
 
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("Authorization", tokenString, 3600 * 24 * 30, "", "", false, true)
+	c.SetCookie("Authorization", tokenString, 3600*24*30, "/", "", false, true)
+	fmt.Println("Setting cookie:", tokenString)
 
 	c.JSON(http.StatusOK, gin.H{"message": "You are logged in"})
 }
@@ -153,11 +155,23 @@ func main() {
 	initDatabase()
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
+	
 	r.POST("/register", register)
 	r.POST("/login", login)
 	r.GET("/protected", authenticate)
 
+	r.OPTIONS("/*path", func(c *gin.Context) {
+		c.AbortWithStatus(204)
+	})
+
 	r.Run(":8080")
+	
 }
 
 /*
